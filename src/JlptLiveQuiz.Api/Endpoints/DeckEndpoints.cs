@@ -15,9 +15,14 @@ public static class DeckEndpoints
             return Results.Ok(decks.Select(d => d.ToDto()));
         });
 
+
         group.MapGet("/{id:int}", async (int id, AppDbContext db) =>
         {
-            var deck = await db.Decks.FindAsync(id);
+            // สั่ง Include เพื่อหนีบเอา Questions ติดมาด้วย
+            var deck = await db.Decks
+                               .Include(d => d.Questions)
+                               .FirstOrDefaultAsync(d => d.Id == id);
+
             return deck is null ? Results.NotFound() : Results.Ok(deck.ToDto());
         });
 

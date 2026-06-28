@@ -15,4 +15,5 @@ public class Deck
     public string Name { get; set; } = string.Empty;
     public JlptLevel Level { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public ICollection<Question> Questions { get; set; } = new List<Question>();
 }
