@@ -1,0 +1,6 @@
+@JlptLiveQuiz.Api_HostAddress = http://localhost:5296
+
+GET {{JlptLiveQuiz.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
