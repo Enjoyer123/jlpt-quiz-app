@@ -1,4 +1,5 @@
 using JlptLiveQuiz.Api.Dtos;
+using JlptLiveQuiz.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace JlptLiveQuiz.Api.Endpoints;
@@ -9,21 +10,29 @@ public static class DeckEndpoints
     {
         var group = app.MapGroup("/api/decks");
 
-        group.MapGet("/", async (AppDbContext db) =>
+        group.MapGet("/", async (AppDbContext db, string? level) =>
         {
-            var decks = await db.Decks.ToListAsync();
+            var query = db.Decks.AsQueryable();
+
+            if (!string.IsNullOrEmpty(level) && Enum.TryParse<JlptLevel>(level, ignoreCase: true, out var parsedLevel))
+                query = query.Where(d => d.Level == parsedLevel);
+
+            var decks = await query.ToListAsync();
             return Results.Ok(decks.Select(d => d.ToDto()));
         });
 
 
         group.MapGet("/{id:int}", async (int id, AppDbContext db) =>
         {
-            // สั่ง Include เพื่อหนีบเอา Questions ติดมาด้วย
-            var deck = await db.Decks
-                               .Include(d => d.Questions)
-                               .FirstOrDefaultAsync(d => d.Id == id);
+            var deck = await db.Decks.FindAsync(id);
+            if (deck is null) return Results.NotFound();
 
-            return deck is null ? Results.NotFound() : Results.Ok(deck.ToDto());
+            var questions = await db.Questions
+                .Where(q => q.DeckId == id)
+                .Select(q => q.ToDto())
+                .ToListAsync();
+
+            return Results.Ok(deck.ToDetailDto(questions));
         });
 
         group.MapPost("/", async (CreateDeckDto dto, AppDbContext db) =>
