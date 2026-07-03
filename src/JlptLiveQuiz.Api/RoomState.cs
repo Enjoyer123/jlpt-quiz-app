@@ -14,6 +14,8 @@ public class PlayerState
     public string ConnectionId { get; set; } = string.Empty;
     public string Nickname { get; set; } = string.Empty;
     public int TotalScore { get; set; } = 0;
+    public int Streak { get; set; } = 0;
+
 }
 
 public class RoomState
@@ -25,9 +27,11 @@ public class RoomState
     public List<PlayerState> Players { get; set; } = new();
 
     public List<Question> Questions { get; set; } = new();
+    public long QuestionStartTimeMs { get; set; } = 0;
     public int CurrentQuestionIndex { get; set; } = 0;
     public int CurrentQuestionId { get; set; } = 0;
     public List<PlayerAnswer> CurrentAnswers { get; set; } = new();
+    public object Lock { get; set; } = new object();
 }
 
 public class PlayerAnswer

@@ -74,6 +74,8 @@ public class GameHub : Hub
         room.CurrentQuestionId = question.Id;
         room.CurrentAnswers = new List<PlayerAnswer>();
 
+        room.QuestionStartTimeMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
         await Clients.Group(room.RoomCode).SendAsync("QuestionStarted", new
         {
             questionId = question.Id,
@@ -91,33 +93,61 @@ public class GameHub : Hub
         if (room is null || room.Status != RoomStatus.InProgress) return;
         if (room.CurrentQuestionId != questionId) return;
 
-        // Check if the player has already answered
-        var alreadyAnswered = room.CurrentAnswers.Any(a => a.ConnectionId == Context.ConnectionId);
-        if (alreadyAnswered) return;
-
         var question = room.Questions[room.CurrentQuestionIndex];
         var isCorrect = selectedIndex == question.CorrectIndex;
         var answerTimeMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        var answer = new PlayerAnswer
+        var player = room.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
+        if (player is null) return;
+
+        bool shouldContinue;
+
+        lock (room.Lock)
         {
-            ConnectionId = Context.ConnectionId,
-            SelectedIndex = selectedIndex,
-            AnswerTimeMs = answerTimeMs,
-            IsCorrect = isCorrect,
-            PointsEarned = 0 // TODO: implement scoring logic
-        };
+            var alreadyAnswered = room.CurrentAnswers.Any(a => a.ConnectionId == Context.ConnectionId);
+            if (alreadyAnswered)
+            {
+                shouldContinue = false;
+            }
+            else
+            {
+                // Update streak and calculate points inside lock to prevent race condition
+                if (isCorrect) player.Streak++;
+                else player.Streak = 0;
 
-        room.CurrentAnswers.Add(answer);
+                var points = CalculatePoints(
+                    isCorrect,
+                    answerTimeMs,
+                    room.QuestionStartTimeMs,
+                    20,
+                    player.Streak
+                );
 
-        // Tell everyone how many players have answered
+                var answer = new PlayerAnswer
+                {
+                    ConnectionId = Context.ConnectionId,
+                    SelectedIndex = selectedIndex,
+                    AnswerTimeMs = answerTimeMs,
+                    IsCorrect = isCorrect,
+                    PointsEarned = points
+                };
+
+                room.CurrentAnswers.Add(answer);
+                shouldContinue = true;
+            }
+        }
+
+        // If already answered, stop here
+        if (!shouldContinue) return;
+
+        // Notify everyone how many players have answered
         await Clients.Group(roomCode).SendAsync("PlayerAnswered", new
         {
             answeredCount = room.CurrentAnswers.Count,
             totalPlayers = room.Players.Count
         });
 
-        // if everyone has answered, end the question immediately
+        // If all players have answered, end the question immediately
         if (room.CurrentAnswers.Count >= room.Players.Count)
         {
             await EndQuestion(room);
@@ -155,7 +185,7 @@ public class GameHub : Hub
         {
             var player = room.Players.FirstOrDefault(p => p.ConnectionId == answer.ConnectionId);
             if (player is null) continue;
-            if (answer.IsCorrect) player.TotalScore += 1000; // placeholder
+            player.TotalScore += answer.PointsEarned;
         }
 
         var leaderboard = room.Players
@@ -167,5 +197,22 @@ public class GameHub : Hub
             correctIndex = question.CorrectIndex,
             leaderboard
         });
+    }
+
+    private int CalculatePoints(bool isCorrect, long answerTimeMs, long questionStartTimeMs, int timeLimit, int streak)
+    {
+        if (!isCorrect)
+        {
+            return 0;
+        }
+
+        // คำนวณเวลาที่ใช้ตอบ (milliseconds → seconds)
+        var timeUsed = (answerTimeMs - questionStartTimeMs) / 1000.0;
+
+        var basePoints = Math.Max(0, (timeLimit - timeUsed) / timeLimit * 1000);
+
+        var streakBonus = (streak - 1) * 50;
+
+        return (int)(basePoints + streakBonus);
     }
 }
