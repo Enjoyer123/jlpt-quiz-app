@@ -16,6 +16,8 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddOpenApi();
+
 builder.Services.AddSignalR();
 
 builder.Services.AddCors(options =>
