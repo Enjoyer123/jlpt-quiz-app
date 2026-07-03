@@ -1,3 +1,5 @@
+using JlptLiveQuiz.Api.Models;
+
 namespace JlptLiveQuiz.Api;
 
 public enum RoomStatus
@@ -21,4 +23,18 @@ public class RoomState
     public int DeckId { get; set; }
     public RoomStatus Status { get; set; } = RoomStatus.Lobby;
     public List<PlayerState> Players { get; set; } = new();
+
+    public List<Question> Questions { get; set; } = new();
+    public int CurrentQuestionIndex { get; set; } = 0;
+    public int CurrentQuestionId { get; set; } = 0;
+    public List<PlayerAnswer> CurrentAnswers { get; set; } = new();
+}
+
+public class PlayerAnswer
+{
+    public string ConnectionId { get; set; } = string.Empty;
+    public int SelectedIndex { get; set; }
+    public long AnswerTimeMs { get; set; }
+    public bool IsCorrect { get; set; }
+    public int PointsEarned { get; set; }
 }
