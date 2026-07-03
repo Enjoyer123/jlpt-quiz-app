@@ -48,6 +48,7 @@ app.UseCors("ReactClient");
 
 app.MapDeckEndpoints();
 app.MapQuestionEndpoints();
+app.MapHistoryEndpoints();
 
 app.MapHub<GameHub>("/gameHub");
 

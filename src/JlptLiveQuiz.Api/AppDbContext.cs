@@ -9,4 +9,6 @@ public class AppDbContext : DbContext
 
     public DbSet<Deck> Decks { get; set; }
     public DbSet<Question> Questions { get; set; }
+    public DbSet<GameHistory> GameHistories { get; set; }
+    public DbSet<PlayerResult> PlayerResults { get; set; }
 }

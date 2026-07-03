@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using JlptLiveQuiz.Api.Models;
 namespace JlptLiveQuiz.Api.Hubs;
 
 public class GameHub : Hub
@@ -166,9 +167,32 @@ public class GameHub : Hub
         {
             // finish the game
             room.Status = RoomStatus.Finished;
-            var finalLeaderboard = room.Players
+
+            var rankedPlayers = room.Players
                 .OrderByDescending(p => p.TotalScore)
+                .ToList();
+
+            // Persist ลง database
+            var gameHistory = new GameHistory
+            {
+                RoomCode = room.RoomCode,
+                DeckId = room.DeckId,
+                PlayedAt = DateTime.UtcNow,
+                TotalQuestions = room.Questions.Count,
+                PlayerResults = rankedPlayers.Select((p, index) => new PlayerResult
+                {
+                    Nickname = p.Nickname,
+                    TotalScore = p.TotalScore,
+                    Rank = index + 1
+                }).ToList()
+            };
+
+            _dbContext.GameHistories.Add(gameHistory);
+            await _dbContext.SaveChangesAsync();
+
+            var finalLeaderboard = rankedPlayers
                 .Select(p => new { nickname = p.Nickname, score = p.TotalScore });
+
             await Clients.Group(roomCode).SendAsync("GameEnded", finalLeaderboard);
             return;
         }
@@ -206,7 +230,7 @@ public class GameHub : Hub
             return 0;
         }
 
-        // คำนวณเวลาที่ใช้ตอบ (milliseconds → seconds)
+        // milliseconds → seconds
         var timeUsed = (answerTimeMs - questionStartTimeMs) / 1000.0;
 
         var basePoints = Math.Max(0, (timeLimit - timeUsed) / timeLimit * 1000);
