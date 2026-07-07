@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>JlptQuiz.Api</AssemblyName>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>645a7de7-b55c-4677-8cc4-bcc3979db560</UserSecretsId>

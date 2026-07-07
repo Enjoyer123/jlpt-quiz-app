@@ -1,7 +1,7 @@
 import * as signalR from "@microsoft/signalr";
 
 const connection = new signalR.HubConnectionBuilder()
-    .withUrl("http://localhost:5296/gameHub")
+    .withUrl("http://localhost:5296/gameHub", { withCredentials: true })
     .withAutomaticReconnect()
     .build();
 

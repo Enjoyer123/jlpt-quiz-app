@@ -1,29 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-
-interface GameHistoryDto {
-    id: number;
-    roomCode: string;
-    deckId: number;
-    playedAt: string;
-    totalQuestions: number;
-    playerCount: number;
-}
-
-interface PlayerResultDto {
-    nickname: string;
-    totalScore: number;
-    rank: number;
-}
-
-interface GameHistoryDetailDto {
-    id: number;
-    roomCode: string;
-    deckId: number;
-    playedAt: string;
-    totalQuestions: number;
-    playerResults: PlayerResultDto[];
-}
+import { getHistory, getHistoryDetail } from "../services/historyService";
+import type { GameHistoryDto, GameHistoryDetailDto } from "../services/historyService";
+import { logout } from "../services/authService";
 
 export default function HistoryPage() {
     const [histories, setHistories] = useState<GameHistoryDto[]>([]);
@@ -32,22 +11,32 @@ export default function HistoryPage() {
     const [detailLoading, setDetailLoading] = useState<boolean>(false);
 
     useEffect(() => {
-        fetch("http://localhost:5296/api/history")
-            .then((res) => res.json())
-            .then((data) => {
-                setHistories(data);
-                setLoading(false);
-            });
+        getHistory()
+            .then((data) => setHistories(data))
+            .catch(async (error) => {
+                const err = error as { status?: number };
+                if (err.status === 401) {
+                    await logout();
+                    window.location.reload();
+                }
+            })
+            .finally(() => setLoading(false));
     }, []);
 
-    const handleSelect = (roomCode: string) => {
+    const handleSelect = async (roomCode: string) => {
         setDetailLoading(true);
-        fetch(`http://localhost:5296/api/history/${roomCode}`)
-            .then((res) => res.json())
-            .then((data) => {
-                setSelected(data);
-                setDetailLoading(false);
-            });
+        try {
+            const detail = await getHistoryDetail(roomCode);
+            setSelected(detail);
+        } catch (error) {
+            const err = error as { status?: number };
+            if (err.status === 401) {
+                await logout();
+                window.location.reload();
+            }
+        } finally {
+            setDetailLoading(false);
+        }
     };
 
     return (
