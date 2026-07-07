@@ -49,4 +49,14 @@ public class RoomManager
 
     private static string GenerateRoomCode() =>
         Guid.NewGuid().ToString("N")[..6].ToUpper();
+
+    public string? GetRoomCodeByConnectionId(string connectionId)
+    {
+        // find the room where the connectionId is either the host or one of the players
+        var room = _rooms.Values.FirstOrDefault(r =>
+            r.HostConnectionId == connectionId ||
+            r.Players.Any(p => p.ConnectionId == connectionId));
+
+        return room?.RoomCode;
+    }
 }

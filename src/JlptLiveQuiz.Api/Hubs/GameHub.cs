@@ -45,6 +45,56 @@ public class GameHub : Hub
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
+        var connectionId = Context.ConnectionId;
+
+        // find the room where the connectionId is either the host or one of the players
+        var roomCode = _roomManager.GetRoomCodeByConnectionId(connectionId);
+
+        if (roomCode != null)
+        {
+            var room = _roomManager.GetRoom(roomCode);
+            if (room != null)
+            {
+                // Host disconnects, we need to end the game for everyone
+                if (room.HostConnectionId == connectionId)
+                {
+                    // inform all players that the game has ended because the host disconnected, and remove the room
+                    await Clients.Group(roomCode).SendAsync("ErrorOccurred", "หัวห้องออกจากการเชื่อมต่อ เกมถูกยกเลิก");
+                    _roomManager.RemoveRoom(roomCode);
+                }
+                // PLayer disconnects, we need to remove them from the room and notify others
+                else
+                {
+                    // Kick the player out of the list
+                    _roomManager.RemovePlayer(roomCode, connectionId);
+
+                    // inform all players in the room that this player has left
+                    await Clients.Group(roomCode).SendAsync("PlayerLeft", connectionId);
+
+                    // if the game is in progress, check if all remaining players have answered. If so, end the question immediately.
+                    if (room.Status == RoomStatus.InProgress)
+                    {
+                        bool shouldEndQuestion = false;
+
+                        // use lock to check the number of answers to ensure thread safety
+                        lock (room.Lock)
+                        {
+                            // if rest of the players (who are still connected) have answered, end the question immediately
+                            if (room.Players.Count > 0 && room.CurrentAnswers.Count >= room.Players.Count)
+                            {
+                                shouldEndQuestion = true;
+                            }
+                        }
+
+                        if (shouldEndQuestion)
+                        {
+                            await EndQuestion(room);
+                        }
+                    }
+                }
+            }
+        }
+
         await base.OnDisconnectedAsync(exception);
     }
 
