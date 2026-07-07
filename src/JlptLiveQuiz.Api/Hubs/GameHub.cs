@@ -17,6 +17,10 @@ public class GameHub : Hub
 
     public async Task CreateRoom(int deckId)
     {
+        if (Context.User?.Identity?.IsAuthenticated != true)
+        {
+            throw new HubException("Unauthorized");
+        }
         var room = _roomManager.CreateRoom(Context.ConnectionId, deckId);
         await Groups.AddToGroupAsync(Context.ConnectionId, room.RoomCode);
         await Clients.Caller.SendAsync("RoomCreated", room.RoomCode);
@@ -101,6 +105,11 @@ public class GameHub : Hub
 
     public async Task StartGame(string roomCode)
     {
+        if (Context.User?.Identity?.IsAuthenticated != true)
+        {
+            throw new HubException("Unauthorized");
+        }
+
         var room = _roomManager.GetRoom(roomCode);
         if (room is null) return;
         if (room.HostConnectionId != Context.ConnectionId) return;
@@ -208,6 +217,11 @@ public class GameHub : Hub
 
     public async Task NextQuestion(string roomCode)
     {
+        if (Context.User?.Identity?.IsAuthenticated != true)
+        {
+            throw new HubException("Unauthorized");
+        }
+
         var room = _roomManager.GetRoom(roomCode);
         if (room is null) return;
         if (room.HostConnectionId != Context.ConnectionId) return;
@@ -224,7 +238,12 @@ public class GameHub : Hub
                 .ToList();
 
             // Persist GameHistory and PlayerResults to the database
-            var userId = int.Parse(Context.User!.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var claim = Context.User?.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (claim == null)
+                throw new HubException("Unauthorized");
+
+            var userId = int.Parse(claim.Value);
 
             var gameHistory = new GameHistory
             {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { login, register } from "../services/authService";
 
 export default function AuthPage({ onLoginSuccess }: { onLoginSuccess: () => void }) {
@@ -10,6 +10,8 @@ export default function AuthPage({ onLoginSuccess }: { onLoginSuccess: () => voi
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const navigate = useNavigate();
+    const location = useLocation();
+    const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? "/";
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -21,7 +23,7 @@ export default function AuthPage({ onLoginSuccess }: { onLoginSuccess: () => voi
             if (mode === "login") {
                 await login(email, password);
                 onLoginSuccess();
-                navigate("/");
+                navigate(from, { replace: true });
             } else {
                 await register(email, password);
                 setSuccessMessage("Account created successfully. Please log in.");

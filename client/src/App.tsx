@@ -4,6 +4,7 @@ import HostPage from "./pages/HostPage";
 import PlayerPage from "./pages/PlayerPage";
 import HistoryPage from "./pages/HistoryPage";
 import AuthPage from "./pages/AuthPage";
+import ProtectedRoute from "./components/ProtectedRoute";
 import { isLoggedIn, logout } from "./services/authService";
 
 const roles = [
@@ -79,13 +80,11 @@ function LandingPage() {
 
 export default function App() {
     const [authenticated, setAuthenticated] = useState(false);
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         isLoggedIn()
             .then(setAuthenticated)
-            .catch(() => setAuthenticated(false))
-            .finally(() => setLoading(false));
+            .catch(() => setAuthenticated(false));
     }, []);
 
     const handleLogout = async () => {
@@ -93,42 +92,41 @@ export default function App() {
         setAuthenticated(false);
     };
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-slate-50 px-4 py-6 text-slate-700 sm:px-6 lg:px-8">
-                <div className="mx-auto flex max-w-6xl items-center justify-center rounded-[28px] border border-white/70 bg-white/80 p-8 shadow-[0_20px_70px_-25px_rgba(15,23,42,0.25)] backdrop-blur">
-                    <span className="text-lg font-semibold text-slate-700">Checking authentication…</span>
-                </div>
-            </div>
-        );
-    }
-
-    if (!authenticated) {
-        return (
-            <BrowserRouter>
-                <AuthPage onLoginSuccess={() => setAuthenticated(true)} />
-            </BrowserRouter>
-        );
-    }
-
     return (
         <BrowserRouter>
             <div className="relative">
-                <div className="absolute right-4 top-4 z-10">
-                    <button
-                        type="button"
-                        onClick={handleLogout}
-                        className="rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100"
-                    >
-                        Logout
-                    </button>
-                </div>
+                {authenticated ? (
+                    <div className="absolute right-4 top-4 z-10">
+                        <button
+                            type="button"
+                            onClick={handleLogout}
+                            className="rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100"
+                        >
+                            Logout
+                        </button>
+                    </div>
+                ) : null}
 
                 <Routes>
                     <Route path="/" element={<LandingPage />} />
-                    <Route path="/host" element={<HostPage />} />
                     <Route path="/player" element={<PlayerPage />} />
-                    <Route path="/history" element={<HistoryPage />} />
+                    <Route path="/login" element={<AuthPage onLoginSuccess={() => setAuthenticated(true)} />} />
+                    <Route
+                        path="/host"
+                        element={
+                            <ProtectedRoute>
+                                <HostPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/history"
+                        element={
+                            <ProtectedRoute>
+                                <HistoryPage />
+                            </ProtectedRoute>
+                        }
+                    />
                 </Routes>
             </div>
         </BrowserRouter>

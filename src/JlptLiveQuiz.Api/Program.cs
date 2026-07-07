@@ -96,7 +96,7 @@ app.MapQuestionEndpoints();
 app.MapHistoryEndpoints();
 app.MapAuthEndpoints();
 
-app.MapHub<GameHub>("/gameHub").RequireAuthorization();
+app.MapHub<GameHub>("/gameHub");
 
 app.Run();
 
