@@ -27,7 +27,10 @@ public class RoomManager
     {
         var room = GetRoom(roomCode);
         if (room is null || room.Status != RoomStatus.Lobby) return false;
-        room.Players.Add(player);
+        lock (room.Lock)
+        {
+            room.Players.Add(player);
+        }
         return true;
     }
 
@@ -35,7 +38,10 @@ public class RoomManager
     {
         var room = GetRoom(roomCode);
         if (room is null) return;
-        room.Players.RemoveAll(p => p.ConnectionId == connectionId);
+        lock (room.Lock)
+        {
+            room.Players.RemoveAll(p => p.ConnectionId == connectionId);
+        }
     }
 
     public void RemoveRoom(string roomCode) =>
