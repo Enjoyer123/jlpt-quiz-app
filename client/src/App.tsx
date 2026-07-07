@@ -4,6 +4,8 @@ import HostPage from "./pages/HostPage";
 import PlayerPage from "./pages/PlayerPage";
 import HistoryPage from "./pages/HistoryPage";
 import AuthPage from "./pages/AuthPage";
+import DeckManagementPage from "./pages/DeckManagementPage";
+import QuestionManagementPage from "./pages/QuestionManagementPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { isLoggedIn, logout } from "./services/authService";
 
@@ -124,6 +126,22 @@ export default function App() {
                         element={
                             <ProtectedRoute>
                                 <HistoryPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/decks"
+                        element={
+                            <ProtectedRoute>
+                                <DeckManagementPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/decks/:deckId/questions"
+                        element={
+                            <ProtectedRoute>
+                                <QuestionManagementPage />
                             </ProtectedRoute>
                         }
                     />

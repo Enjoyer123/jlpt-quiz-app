@@ -5,6 +5,7 @@ import {
     onRoomCreated, onPlayerJoined, onQuestionStarted,
     onPlayerAnswered, onQuestionEnded, onGameEnded
 } from "../services/signalrService";
+import { getDeckSummaries, type DeckSummary } from "../services/deckService";
 
 interface Question {
     questionId: number;
@@ -23,7 +24,9 @@ interface LeaderboardEntry {
 type GamePhase = "lobby" | "question" | "result" | "ended";
 
 export default function HostPage() {
-    const [deckId, setDeckId] = useState<number>(1);
+    const [selectedDeckId, setSelectedDeckId] = useState<number | null>(null);
+    const [decks, setDecks] = useState<DeckSummary[]>([]);
+    const [isLoadingDecks, setIsLoadingDecks] = useState(true);
     const [roomCode, setRoomCode] = useState<string>("");
     const [players, setPlayers] = useState<string[]>([]);
     const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -32,6 +35,25 @@ export default function HostPage() {
     const [answeredCount, setAnsweredCount] = useState<number>(0);
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [correctIndex, setCorrectIndex] = useState<number>(-1);
+
+    useEffect(() => {
+        const loadDecks = async () => {
+            setIsLoadingDecks(true);
+            try {
+                const nextDecks = await getDeckSummaries();
+                setDecks(nextDecks);
+                if (nextDecks.length > 0) {
+                    setSelectedDeckId(nextDecks[0].id);
+                }
+            } catch {
+                setDecks([]);
+            } finally {
+                setIsLoadingDecks(false);
+            }
+        };
+
+        void loadDecks();
+    }, []);
 
     useEffect(() => {
         startConnection().then(() => {
@@ -98,25 +120,57 @@ export default function HostPage() {
                                 </div>
                             </div>
 
-                            <label className="mt-6 block text-sm font-semibold text-slate-700" htmlFor="deck-id">
-                                Deck ID
+                            <label className="mt-6 block text-sm font-semibold text-slate-700" htmlFor="deck-select">
+                                Deck
                             </label>
                             <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-                                <input
-                                    id="deck-id"
-                                    type="number"
-                                    value={deckId}
-                                    onChange={(e) => setDeckId(Number(e.target.value))}
+                                <select
+                                    id="deck-select"
+                                    value={selectedDeckId ?? ""}
+                                    onChange={(event) => setSelectedDeckId(Number(event.target.value))}
                                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-400 focus:bg-white"
-                                />
+                                    disabled={isLoadingDecks}
+                                >
+                                    {decks.length === 0 ? (
+                                        <option value="">No decks available</option>
+                                    ) : (
+                                        decks.map((deck) => (
+                                            <option key={deck.id} value={deck.id}>
+                                                {deck.name} • {deck.questionCount} questions
+                                            </option>
+                                        ))
+                                    )}
+                                </select>
                                 <button
-                                    onClick={() => createRoom(deckId)}
-                                    disabled={!isConnected || !!roomCode}
+                                    onClick={() => selectedDeckId && createRoom(selectedDeckId)}
+                                    disabled={!isConnected || !!roomCode || !selectedDeckId || isLoadingDecks}
                                     className="rounded-2xl bg-gradient-to-r from-emerald-500 to-lime-500 px-5 py-3 font-semibold text-white shadow-md transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     Create room
                                 </button>
                             </div>
+
+                            {selectedDeckId !== null ? (
+                                <div className="mt-3 rounded-[24px] border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
+                                    {(() => {
+                                        const selectedDeck = decks.find((deck) => deck.id === selectedDeckId);
+                                        if (!selectedDeck) {
+                                            return null;
+                                        }
+                                        return (
+                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="font-semibold text-slate-900">{selectedDeck.name}</p>
+                                                    <p className="mt-1">{selectedDeck.questionCount} questions ready</p>
+                                                </div>
+                                                <Link to="/decks" className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                                                    Manage decks
+                                                </Link>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            ) : null}
 
                             {roomCode && (
                                 <div className="mt-8 rounded-[24px] border border-slate-200 bg-slate-50/80 p-5">
