@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using JlptLiveQuiz.Api.Models;
+using System.Security.Claims;
 namespace JlptLiveQuiz.Api.Hubs;
 
 public class GameHub : Hub
@@ -222,13 +223,16 @@ public class GameHub : Hub
                 .OrderByDescending(p => p.TotalScore)
                 .ToList();
 
-            // Persist ลง database
+            // Persist GameHistory and PlayerResults to the database
+            var userId = int.Parse(Context.User!.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
             var gameHistory = new GameHistory
             {
                 RoomCode = room.RoomCode,
                 DeckId = room.DeckId,
                 PlayedAt = DateTime.UtcNow,
                 TotalQuestions = room.Questions.Count,
+                UserId = userId,
                 PlayerResults = rankedPlayers.Select((p, index) => new PlayerResult
                 {
                     Nickname = p.Nickname,

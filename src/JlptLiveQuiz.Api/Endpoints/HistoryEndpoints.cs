@@ -1,5 +1,6 @@
 using JlptLiveQuiz.Api.Dtos;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace JlptLiveQuiz.Api.Endpoints;
 
@@ -7,12 +8,15 @@ public static class HistoryEndpoints
 {
     public static void MapHistoryEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/history");
+        var group = app.MapGroup("/api/history").RequireAuthorization();
 
-        group.MapGet("/", async (AppDbContext db, int page = 1) =>
+        group.MapGet("/", async (HttpContext http, AppDbContext db, int page = 1) =>
         {
+            var userId = int.Parse(http.User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             var pageSize = 10;
+
             var histories = await db.GameHistories
+                .Where(h => h.UserId == userId)
                 .OrderByDescending(h => h.PlayedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
@@ -29,11 +33,13 @@ public static class HistoryEndpoints
             return Results.Ok(histories);
         });
 
-        group.MapGet("/{roomCode}", async (string roomCode, AppDbContext db) =>
+        group.MapGet("/{roomCode}", async (string roomCode, HttpContext http, AppDbContext db) =>
         {
+            var userId = int.Parse(http.User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
             var history = await db.GameHistories
                 .Include(h => h.PlayerResults)
-                .FirstOrDefaultAsync(h => h.RoomCode == roomCode);
+                .FirstOrDefaultAsync(h => h.RoomCode == roomCode && h.UserId == userId);
 
             if (history is null) return Results.NotFound();
 

@@ -3,6 +3,9 @@ using JlptLiveQuiz.Api.Endpoints;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using JlptLiveQuiz.Api.Hubs;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +34,41 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/gameHub"))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddSingleton<RoomManager>();
 
 var app = builder.Build();
@@ -45,12 +83,15 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseCors("ReactClient");
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapDeckEndpoints();
 app.MapQuestionEndpoints();
 app.MapHistoryEndpoints();
+app.MapAuthEndpoints();
 
-app.MapHub<GameHub>("/gameHub");
+app.MapHub<GameHub>("/gameHub").RequireAuthorization();
 
 app.Run();
 

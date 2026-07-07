@@ -7,6 +7,8 @@ public class GameHistory
     public int DeckId { get; set; }
     public DateTime PlayedAt { get; set; } = DateTime.UtcNow;
     public int TotalQuestions { get; set; }
+    public int? UserId { get; set; }
+    public User? User { get; set; }
     public ICollection<PlayerResult> PlayerResults { get; set; } = new List<PlayerResult>();
 }
 
