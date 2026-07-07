@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import {
     startConnection, joinRoom, submitAnswer,
     onPlayerJoined, onQuestionStarted,
@@ -104,106 +105,194 @@ export default function PlayerPage() {
         submitAnswer(roomCodeRef.current, currentQuestion.questionId, index);
     };
 
-    const getChoiceStyle = (index: number): React.CSSProperties => {
+    const getChoiceClassName = (index: number) => {
+        const base = "w-full rounded-[20px] border px-4 py-4 text-left text-sm font-semibold transition-all duration-200";
+
         if (phase === "result") {
-            if (index === correctIndex) return { backgroundColor: "green", color: "white" };
-            if (index === selectedIndex && index !== correctIndex) return { backgroundColor: "red", color: "white" };
+            if (index === correctIndex) return `${base} border-emerald-300 bg-emerald-50 text-emerald-800`;
+            if (index === selectedIndex && index !== correctIndex) return `${base} border-rose-300 bg-rose-50 text-rose-700`;
         }
-        if (selectedIndex === index) return { backgroundColor: "gray", color: "white" };
-        return {};
+
+        if (selectedIndex === index) return `${base} border-sky-300 bg-sky-50 text-sky-700`;
+
+        return `${base} border-slate-200 bg-white/90 text-slate-700 shadow-sm hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md`;
     };
 
     return (
-        <div>
-            {phase === "join" && (
-                <div>
-                    <h1>Join Room</h1>
+        <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(125,211,252,0.25),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(217,70,239,0.2),_transparent_28%),linear-gradient(135deg,_#f8fcff_0%,_#f3fbf6_50%,_#faf6ff_100%)] px-4 py-6 text-slate-700 sm:px-6 lg:px-8">
+            <div className="mx-auto flex max-w-5xl flex-col gap-6">
+                <header className="flex flex-col gap-4 rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-[0_24px_70px_-25px_rgba(15,23,42,0.28)] backdrop-blur sm:flex-row sm:items-end sm:justify-between sm:p-8">
                     <div>
-                        <input
-                            type="text"
-                            value={roomCode}
-                            onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                            placeholder="Room Code"
-                        />
+                        <p className="mb-2 inline-flex rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-700">
+                            Player lounge
+                        </p>
+                        <h1 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
+                            Jump into the quiz with energy.
+                        </h1>
+                        <p className="mt-2 max-w-2xl text-base text-slate-600">
+                            Join a room, answer as the timer counts down, and enjoy a polished, game-ready experience.
+                        </p>
                     </div>
-                    <div>
-                        <input
-                            type="text"
-                            value={nickname}
-                            onChange={(e) => setNickname(e.target.value)}
-                            placeholder="Nickname"
-                        />
-                    </div>
-                    {error && <p style={{ color: "red" }}>{error}</p>}
-                    <button onClick={handleJoin} disabled={!isConnected}>
-                        เข้าห้อง
-                    </button>
-                </div>
-            )}
+                    <Link to="/" className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                        ← Back home
+                    </Link>
+                </header>
 
-            {phase === "lobby" && (
-                <div>
-                    <h2>ห้อง: {roomCode}</h2>
-                    <p>รอ host เริ่มเกม...</p>
-                    <h3>ผู้เล่นในห้อง ({players.length} คน)</h3>
-                    <ul>
-                        {players.map((name, i) => <li key={i}>{name}</li>)}
-                    </ul>
-                </div>
-            )}
-
-            {(phase === "question" || phase === "answered") && currentQuestion && (
-                <div>
-                    <h2>ข้อที่ {currentQuestion.questionIndex + 1}/{currentQuestion.totalQuestions}</h2>
-                    <p>⏱ {timeLeft} วินาที</p>
-                    <h1>{currentQuestion.term}</h1>
-                    <div>
-                        {currentQuestion.choices.map((choice, i) => (
-                            <button
-                                key={i}
-                                onClick={() => handleAnswer(i)}
-                                disabled={selectedIndex !== -1}
-                                style={getChoiceStyle(i)}
-                            >
-                                {["A", "B", "C", "D"][i]}: {choice}
-                            </button>
-                        ))}
-                    </div>
-                    <p>ตอบแล้ว: {answeredCount} คน</p>
-                    {phase === "answered" && <p>✅ ส่งคำตอบแล้ว รอคนอื่น...</p>}
-                </div>
-            )}
-
-            {phase === "result" && currentQuestion && (
-                <div>
-                    <h2>เฉลย</h2>
-                    <div>
-                        {currentQuestion.choices.map((choice, i) => (
-                            <div key={i} style={getChoiceStyle(i)}>
-                                {["A", "B", "C", "D"][i]}: {choice}
+                {phase === "join" && (
+                    <section className="rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_70px_-25px_rgba(15,23,42,0.26)] backdrop-blur sm:p-8">
+                        <div className="max-w-xl">
+                            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">Join a room</p>
+                            <h2 className="mt-2 text-2xl font-bold text-slate-900">Enter your room code</h2>
+                            <div className="mt-6 space-y-4">
+                                <label className="block text-sm font-semibold text-slate-700" htmlFor="room-code">
+                                    Room code
+                                </label>
+                                <input
+                                    id="room-code"
+                                    type="text"
+                                    value={roomCode}
+                                    onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                                    placeholder="Room Code"
+                                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white"
+                                />
+                                <label className="block text-sm font-semibold text-slate-700" htmlFor="nickname">
+                                    Nickname
+                                </label>
+                                <input
+                                    id="nickname"
+                                    type="text"
+                                    value={nickname}
+                                    onChange={(e) => setNickname(e.target.value)}
+                                    placeholder="Nickname"
+                                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white"
+                                />
                             </div>
-                        ))}
-                    </div>
-                    <h3>Leaderboard</h3>
-                    <ol>
-                        {leaderboard.map((entry, i) => (
-                            <li key={i}>{entry.nickname} — {entry.score} คะแนน</li>
-                        ))}
-                    </ol>
-                    <p>รอ host ไปข้อถัดไป...</p>
-                </div>
-            )}
+                            {error && <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{error}</p>}
+                            <button
+                                onClick={handleJoin}
+                                disabled={!isConnected}
+                                className="mt-6 rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-400 px-5 py-3 font-semibold text-white shadow-md transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                Join room
+                            </button>
+                        </div>
+                    </section>
+                )}
 
-            {phase === "ended" && (
-                <div>
-                    <h1>จบเกม!</h1>
-                    <ol>
-                        {leaderboard.map((entry, i) => (
-                            <li key={i}>{entry.nickname} — {entry.score} คะแนน</li>
-                        ))}
-                    </ol>
-                </div>
-            )}
+                {phase === "lobby" && (
+                    <section className="rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_70px_-25px_rgba(15,23,42,0.26)] backdrop-blur sm:p-8">
+                        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">Waiting room</p>
+                        <h2 className="mt-2 text-2xl font-bold text-slate-900">Room {roomCode}</h2>
+                        <p className="mt-2 text-sm text-slate-600">The host will start the session soon. You are all set and ready to play.</p>
+                        <div className="mt-6 rounded-[24px] border border-slate-200 bg-slate-50/80 p-6">
+                            <h3 className="text-lg font-bold text-slate-900">Players in the room ({players.length})</h3>
+                            <div className="mt-4 grid gap-2">
+                                {players.map((name, index) => (
+                                    <div key={`${name}-${index}`} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                                        <span className="font-medium">{name}</span>
+                                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                            Player {index + 1}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {(phase === "question" || phase === "answered") && currentQuestion && (
+                    <section className="rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_70px_-25px_rgba(15,23,42,0.26)] backdrop-blur sm:p-8">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">Question</p>
+                                <h2 className="text-2xl font-bold text-slate-900">
+                                    {currentQuestion.questionIndex + 1}/{currentQuestion.totalQuestions}
+                                </h2>
+                            </div>
+                            <div className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-sm font-semibold text-orange-700">
+                                ⏱ {timeLeft}s
+                            </div>
+                        </div>
+
+                        <div className="mt-6 rounded-[24px] border border-slate-200 bg-slate-50/80 p-6">
+                            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">Prompt</p>
+                            <h3 className="mt-3 text-3xl font-black text-slate-900">{currentQuestion.term}</h3>
+                            <div className="mt-6 grid gap-3">
+                                {currentQuestion.choices.map((choice, index) => (
+                                    <button
+                                        key={`${choice}-${index}`}
+                                        onClick={() => handleAnswer(index)}
+                                        disabled={selectedIndex !== -1}
+                                        className={getChoiceClassName(index)}
+                                    >
+                                        <span className="mr-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 font-bold text-slate-700">
+                                            {['A', 'B', 'C', 'D'][index]}
+                                        </span>
+                                        {choice}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-slate-200 bg-white/80 px-4 py-4 text-sm text-slate-600">
+                            <span>{answeredCount} players have answered so far</span>
+                            {phase === "answered" && <span className="font-semibold text-emerald-700">Answer sent. Waiting for the next reveal.</span>}
+                        </div>
+                    </section>
+                )}
+
+                {phase === "result" && currentQuestion && (
+                    <section className="rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_70px_-25px_rgba(15,23,42,0.26)] backdrop-blur sm:p-8">
+                        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">Reveal</p>
+                        <h2 className="mt-2 text-2xl font-bold text-slate-900">See how you did</h2>
+                        <div className="mt-6 grid gap-3">
+                            {currentQuestion.choices.map((choice, index) => (
+                                <div key={`${choice}-${index}`} className={getChoiceClassName(index)}>
+                                    <span className="mr-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 font-bold text-slate-700">
+                                        {['A', 'B', 'C', 'D'][index]}
+                                    </span>
+                                    {choice}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="mt-6 rounded-[24px] border border-slate-200 bg-slate-50/80 p-6">
+                            <h3 className="text-lg font-bold text-slate-900">Leaderboard</h3>
+                            <div className="mt-4 space-y-2">
+                                {leaderboard.map((entry, index) => (
+                                    <div key={`${entry.nickname}-${index}`} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                                        <span className="font-semibold text-slate-900">{index + 1}. {entry.nickname}</span>
+                                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                            {entry.score} pts
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <p className="mt-5 text-sm text-slate-600">The host will move to the next question soon.</p>
+                    </section>
+                )}
+
+                {phase === "ended" && (
+                    <section className="rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_70px_-25px_rgba(15,23,42,0.26)] backdrop-blur sm:p-8">
+                        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">Session complete</p>
+                        <h2 className="mt-2 text-3xl font-black text-slate-900">Great work, learner.</h2>
+                        <div className="mt-6 rounded-[24px] border border-slate-200 bg-slate-50/80 p-6">
+                            <h3 className="text-lg font-bold text-slate-900">Final leaderboard</h3>
+                            <div className="mt-4 space-y-2">
+                                {leaderboard.map((entry, index) => (
+                                    <div key={`${entry.nickname}-${index}`} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                                        <span className="font-semibold text-slate-900">{index + 1}. {entry.nickname}</span>
+                                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                            {entry.score} pts
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
+            </div>
         </div>
     );
 }
