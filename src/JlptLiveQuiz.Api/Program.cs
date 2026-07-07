@@ -53,11 +53,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             OnMessageReceived = context =>
             {
+                // อ่าน JWT จาก cookie ก่อน
+                if (context.Request.Cookies.ContainsKey("jwt"))
+                {
+                    context.Token = context.Request.Cookies["jwt"];
+                }
+
+                // SignalR ส่งผ่าน query string
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
-
-                if (!string.IsNullOrEmpty(accessToken) &&
-                    path.StartsWithSegments("/gameHub"))
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/gameHub"))
                 {
                     context.Token = accessToken;
                 }

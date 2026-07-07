@@ -32,7 +32,7 @@ public static class AuthEndpoints
             return Results.Ok("Register สำเร็จ");
         });
 
-        group.MapPost("/login", async (LoginDto dto, AppDbContext db, IConfiguration config) =>
+        group.MapPost("/login", async (LoginDto dto, AppDbContext db, IConfiguration config, HttpContext http) =>
         {
             var user = await db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
             if (user is null) return Results.Unauthorized();
@@ -42,7 +42,23 @@ public static class AuthEndpoints
 
             var token = GenerateToken(user, config);
 
-            return Results.Ok(new AuthResponseDto(token, user.Email));
+            // Set HttpOnly cookie แทนส่ง token กลับมา
+            http.Response.Cookies.Append("jwt", token, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = false, // true ตอน production
+                SameSite = SameSiteMode.Lax,
+                Expires = DateTimeOffset.UtcNow.AddDays(7)
+            });
+
+            return Results.Ok(new { email = user.Email });
+        });
+
+        // เพิ่ม logout endpoint
+        group.MapPost("/logout", (HttpContext http) =>
+        {
+            http.Response.Cookies.Delete("jwt");
+            return Results.Ok();
         });
     }
 
