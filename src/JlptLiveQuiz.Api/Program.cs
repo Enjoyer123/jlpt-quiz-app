@@ -77,6 +77,13 @@ builder.Services.AddSingleton<RoomManager>();
 
 var app = builder.Build();
 
+// Auto migrate on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
