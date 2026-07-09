@@ -117,6 +117,8 @@ export default function HostPage() {
         connectionStatus === "failed" ? "Failed to connect" : "Connecting...";
 
     const canHostAct = isConnected && connectionStatus === "connected";
+    const hasDecks = decks.length > 0;
+    const canCreateRoom = hasDecks && !!selectedDeckId && canHostAct && !roomCode && !isLoadingDecks;
 
     return (
         <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.2),_transparent_25%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.18),_transparent_24%),linear-gradient(135deg,_#f8fcff_0%,_#f5fbf7_45%,_#faf6ff_100%)] px-4 py-6 text-slate-700 sm:px-6 lg:px-8">
@@ -146,8 +148,13 @@ export default function HostPage() {
                                     <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">Setup</p>
                                     <h2 className="text-2xl font-bold text-slate-900">Create a fresh room</h2>
                                 </div>
-                                <div className={`rounded-full px-3 py-1 text-sm font-semibold ${canHostAct ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                                    {connectionLabel}
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <Link to="/decks" className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                                        Manage decks
+                                    </Link>
+                                    <div className={`rounded-full px-3 py-1 text-sm font-semibold ${canHostAct ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                                        {connectionLabel}
+                                    </div>
                                 </div>
                             </div>
 
@@ -160,34 +167,41 @@ export default function HostPage() {
                             <label className="mt-6 block text-sm font-semibold text-slate-700" htmlFor="deck-select">
                                 Deck
                             </label>
-                            <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-                                <select
-                                    id="deck-select"
-                                    value={selectedDeckId ?? ""}
-                                    onChange={(event) => setSelectedDeckId(Number(event.target.value))}
-                                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-400 focus:bg-white"
-                                    disabled={isLoadingDecks}
-                                >
-                                    {decks.length === 0 ? (
-                                        <option value="">No decks available</option>
-                                    ) : (
-                                        decks.map((deck) => (
+
+                            {hasDecks ? (
+                                <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+                                    <select
+                                        id="deck-select"
+                                        value={selectedDeckId ?? ""}
+                                        onChange={(event) => setSelectedDeckId(Number(event.target.value))}
+                                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-400 focus:bg-white"
+                                        disabled={isLoadingDecks}
+                                    >
+                                        {decks.map((deck) => (
                                             <option key={deck.id} value={deck.id}>
                                                 {deck.name} • {deck.questionCount} questions
                                             </option>
-                                        ))
-                                    )}
-                                </select>
-                                <button
-                                    onClick={() => selectedDeckId && createRoom(selectedDeckId)}
-                                    disabled={!canHostAct || !!roomCode || !selectedDeckId || isLoadingDecks}
-                                    className="rounded-2xl bg-gradient-to-r from-emerald-500 to-lime-500 px-5 py-3 font-semibold text-white shadow-md transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                    Create room
-                                </button>
-                            </div>
+                                        ))}
+                                    </select>
+                                    <button
+                                        onClick={() => selectedDeckId && createRoom(selectedDeckId)}
+                                        disabled={!canCreateRoom}
+                                        className="rounded-2xl bg-gradient-to-r from-emerald-500 to-lime-500 px-5 py-3 font-semibold text-white shadow-md transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        Create room
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="mt-3 rounded-[24px] border border-emerald-200 bg-emerald-50/80 p-5 text-sm text-emerald-800">
+                                    <p className="font-semibold text-emerald-900">No decks yet</p>
+                                    <p className="mt-2">At least one deck is required before you can create a room.</p>
+                                    <Link to="/decks" className="mt-4 inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-500 to-lime-500 px-4 py-3 font-semibold text-white shadow-md transition hover:brightness-105">
+                                        Create Deck
+                                    </Link>
+                                </div>
+                            )}
 
-                            {selectedDeckId !== null ? (
+                            {selectedDeckId !== null && hasDecks ? (
                                 <div className="mt-3 rounded-[24px] border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
                                     {(() => {
                                         const selectedDeck = decks.find((deck) => deck.id === selectedDeckId);
@@ -200,9 +214,6 @@ export default function HostPage() {
                                                     <p className="font-semibold text-slate-900">{selectedDeck.name}</p>
                                                     <p className="mt-1">{selectedDeck.questionCount} questions ready</p>
                                                 </div>
-                                                <Link to="/decks" className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
-                                                    Manage decks
-                                                </Link>
                                             </div>
                                         );
                                     })()}

@@ -1,6 +1,7 @@
 using JlptLiveQuiz.Api.Dtos;
 using JlptLiveQuiz.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace JlptLiveQuiz.Api.Endpoints;
 
@@ -10,9 +11,10 @@ public static class DeckEndpoints
     {
         var group = app.MapGroup("/api/decks").RequireAuthorization();
 
-        group.MapGet("/", async (AppDbContext db, string? level) =>
+        group.MapGet("/", async (AppDbContext db, string? level, ClaimsPrincipal user) =>
         {
-            var query = db.Decks.AsQueryable();
+            var currentUserId = GetCurrentUserId(user);
+            var query = db.Decks.Where(d => d.UserId == currentUserId).AsQueryable();
 
             if (!string.IsNullOrEmpty(level) && Enum.TryParse<JlptLevel>(level, ignoreCase: true, out var parsedLevel))
                 query = query.Where(d => d.Level == parsedLevel);
@@ -21,11 +23,12 @@ public static class DeckEndpoints
             return Results.Ok(decks.Select(d => d.ToDto()));
         });
 
-
-        group.MapGet("/{id:int}", async (int id, AppDbContext db) =>
+        group.MapGet("/{id:int}", async (int id, AppDbContext db, ClaimsPrincipal user) =>
         {
-            var deck = await db.Decks.FindAsync(id);
+            var currentUserId = GetCurrentUserId(user);
+            var deck = await db.Decks.FirstOrDefaultAsync(d => d.Id == id);
             if (deck is null) return Results.NotFound();
+            if (deck.UserId != currentUserId) return Results.Forbid();
 
             var questions = await db.Questions
                 .Where(q => q.DeckId == id)
@@ -35,18 +38,22 @@ public static class DeckEndpoints
             return Results.Ok(deck.ToDetailDto(questions));
         });
 
-        group.MapPost("/", async (CreateDeckDto dto, AppDbContext db) =>
+        group.MapPost("/", async (CreateDeckDto dto, AppDbContext db, ClaimsPrincipal user) =>
         {
+            var currentUserId = GetCurrentUserId(user);
             var deck = dto.ToEntity();
+            deck.UserId = currentUserId;
             db.Decks.Add(deck);
             await db.SaveChangesAsync();
             return Results.Created($"/api/decks/{deck.Id}", deck.ToDto());
         });
 
-        group.MapPut("/{id:int}", async (int id, UpdateDeckDto dto, AppDbContext db) =>
+        group.MapPut("/{id:int}", async (int id, UpdateDeckDto dto, AppDbContext db, ClaimsPrincipal user) =>
         {
-            var deck = await db.Decks.FindAsync(id);
+            var currentUserId = GetCurrentUserId(user);
+            var deck = await db.Decks.FirstOrDefaultAsync(d => d.Id == id);
             if (deck is null) return Results.NotFound();
+            if (deck.UserId != currentUserId) return Results.Forbid();
 
             deck.Name = dto.Name;
             deck.Level = dto.Level;
@@ -54,14 +61,21 @@ public static class DeckEndpoints
             return Results.NoContent();
         });
 
-        group.MapDelete("/{id:int}", async (int id, AppDbContext db) =>
+        group.MapDelete("/{id:int}", async (int id, AppDbContext db, ClaimsPrincipal user) =>
         {
-            var deck = await db.Decks.FindAsync(id);
+            var currentUserId = GetCurrentUserId(user);
+            var deck = await db.Decks.FirstOrDefaultAsync(d => d.Id == id);
             if (deck is null) return Results.NotFound();
+            if (deck.UserId != currentUserId) return Results.Forbid();
 
             db.Decks.Remove(deck);
             await db.SaveChangesAsync();
             return Results.NoContent();
         });
+    }
+
+    private static int GetCurrentUserId(ClaimsPrincipal user)
+    {
+        return int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
     }
 }

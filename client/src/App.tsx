@@ -1,11 +1,11 @@
-import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Link, Route, Routes, useNavigate } from "react-router-dom";import { useEffect, useState } from "react";
 import HostPage from "./pages/HostPage";
 import PlayerPage from "./pages/PlayerPage";
 import HistoryPage from "./pages/HistoryPage";
 import AuthPage from "./pages/AuthPage";
 import DeckManagementPage from "./pages/DeckManagementPage";
 import QuestionManagementPage from "./pages/QuestionManagementPage";
+import ProfilePage from "./pages/ProfilePage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { isLoggedIn, logout } from "./services/authService";
 
@@ -80,8 +80,10 @@ function LandingPage() {
     );
 }
 
-export default function App() {
+function AppShell() {
     const [authenticated, setAuthenticated] = useState(false);
+    const [logoutLoading, setLogoutLoading] = useState(false);
+    const navigate = useNavigate();
 
     useEffect(() => {
         isLoggedIn()
@@ -90,21 +92,34 @@ export default function App() {
     }, []);
 
     const handleLogout = async () => {
-        await logout();
-        setAuthenticated(false);
+        if (!window.confirm("Are you sure you want to log out?")) {
+            return;
+        }
+
+        setLogoutLoading(true);
+        try {
+            await logout();
+        } finally {
+            setAuthenticated(false);
+            setLogoutLoading(false);
+            navigate("/login", { replace: true, state: { message: "You have been signed out." } });
+        }
     };
 
     return (
-        <BrowserRouter>
             <div className="relative">
                 {authenticated ? (
-                    <div className="absolute right-4 top-4 z-10">
+                    <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+                        <Link to="/profile" className="rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100">
+                            Profile
+                        </Link>
                         <button
                             type="button"
                             onClick={handleLogout}
-                            className="rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100"
+                            disabled={logoutLoading}
+                            className="rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                            Logout
+                            {logoutLoading ? "Logging out..." : "Logout"}
                         </button>
                     </div>
                 ) : null}
@@ -145,8 +160,19 @@ export default function App() {
                             </ProtectedRoute>
                         }
                     />
+                    <Route
+                        path="/profile"
+                        element={
+                            <ProtectedRoute>
+                                <ProfilePage />
+                            </ProtectedRoute>
+                        }
+                    />
                 </Routes>
             </div>
-        </BrowserRouter>
     );
+}
+
+export default function App() {
+    return <AppShell />;
 }

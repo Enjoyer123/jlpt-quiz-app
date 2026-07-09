@@ -1,14 +1,15 @@
 import { ApiError, postJson, fetchJson } from "./apiClient";
 
 export interface UserInfo {
+    id: number;
     email: string;
 }
 
 let currentUser: UserInfo | null = null;
 
 export async function login(email: string, password: string): Promise<UserInfo> {
-    const result = await postJson<{ email: string }>("/api/auth/login", { email, password });
-    currentUser = { email: result.email };
+    const result = await postJson<{ id: number; email: string }>('/api/auth/login', { email, password });
+    currentUser = { id: result.id, email: result.email };
     return currentUser;
 }
 

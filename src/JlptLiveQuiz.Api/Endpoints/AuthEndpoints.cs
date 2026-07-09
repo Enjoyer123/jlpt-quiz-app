@@ -58,6 +58,23 @@ public static class AuthEndpoints
             http.Response.Cookies.Delete("jwt");
             return Results.Ok();
         });
+
+        group.MapGet("/profile", async (AppDbContext db, ClaimsPrincipal user) =>
+        {
+            var currentUserId = int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userProfile = await db.Users
+                .Where(u => u.Id == currentUserId)
+                .Select(u => new
+                {
+                    id = u.Id,
+                    email = u.Email,
+                    deckCount = u.Decks.Count,
+                    hostedGameCount = u.GameHistories.Count
+                })
+                .FirstOrDefaultAsync();
+
+            return userProfile is null ? Results.NotFound() : Results.Ok(userProfile);
+        });
     }
 
     private static string GenerateToken(User user, IConfiguration config)

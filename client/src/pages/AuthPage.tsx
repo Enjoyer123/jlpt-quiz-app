@@ -11,7 +11,9 @@ export default function AuthPage({ onLoginSuccess }: { onLoginSuccess: () => voi
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const navigate = useNavigate();
     const location = useLocation();
-    const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? "/";
+    const locationState = (location.state as { from?: { pathname?: string }; message?: string } | null) ?? null;
+    const from = locationState?.from?.pathname ?? "/";
+    const logoutMessage = locationState?.message ?? null;
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -113,9 +115,9 @@ export default function AuthPage({ onLoginSuccess }: { onLoginSuccess: () => voi
                             </div>
                         ) : null}
 
-                        {successMessage ? (
+                        {successMessage || logoutMessage ? (
                             <div className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                                {successMessage}
+                                {successMessage ?? logoutMessage}
                             </div>
                         ) : null}
 

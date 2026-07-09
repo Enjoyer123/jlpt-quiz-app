@@ -3,6 +3,7 @@ using System;
 using JlptLiveQuiz.Api;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace JlptLiveQuiz.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260709045539_AddDeckOwnership")]
+    partial class AddDeckOwnership
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -40,12 +43,7 @@ namespace JlptLiveQuiz.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int?>("UserId")
-                        .HasColumnType("integer");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("Decks");
                 });
@@ -174,19 +172,10 @@ namespace JlptLiveQuiz.Api.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("JlptLiveQuiz.Api.Models.Deck", b =>
-                {
-                    b.HasOne("JlptLiveQuiz.Api.Models.User", "User")
-                        .WithMany("Decks")
-                        .HasForeignKey("UserId");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("JlptLiveQuiz.Api.Models.GameHistory", b =>
                 {
                     b.HasOne("JlptLiveQuiz.Api.Models.User", "User")
-                        .WithMany("GameHistories")
+                        .WithMany()
                         .HasForeignKey("UserId");
 
                     b.Navigation("User");
@@ -222,13 +211,6 @@ namespace JlptLiveQuiz.Api.Migrations
             modelBuilder.Entity("JlptLiveQuiz.Api.Models.GameHistory", b =>
                 {
                     b.Navigation("PlayerResults");
-                });
-
-            modelBuilder.Entity("JlptLiveQuiz.Api.Models.User", b =>
-                {
-                    b.Navigation("Decks");
-
-                    b.Navigation("GameHistories");
                 });
 #pragma warning restore 612, 618
         }
