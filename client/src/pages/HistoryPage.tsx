@@ -9,22 +9,38 @@ export default function HistoryPage() {
     const [selected, setSelected] = useState<GameHistoryDetailDto | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [detailLoading, setDetailLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+    const [page, setPage] = useState<number>(1);
+    const [hasNextPage, setHasNextPage] = useState<boolean>(false);
+
+    const loadHistory = async (nextPage: number) => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const data = await getHistory(nextPage);
+            setHistories(data);
+            setHasNextPage(data.length === 10);
+        } catch (error) {
+            const err = error as { status?: number };
+            if (err.status === 401) {
+                await logout();
+                window.location.reload();
+                return;
+            }
+            setError("Unable to load history right now.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        getHistory()
-            .then((data) => setHistories(data))
-            .catch(async (error) => {
-                const err = error as { status?: number };
-                if (err.status === 401) {
-                    await logout();
-                    window.location.reload();
-                }
-            })
-            .finally(() => setLoading(false));
-    }, []);
+        void loadHistory(page);
+    }, [page]);
 
     const handleSelect = async (roomCode: string) => {
         setDetailLoading(true);
+        setError(null);
         try {
             const detail = await getHistoryDetail(roomCode);
             setSelected(detail);
@@ -33,7 +49,9 @@ export default function HistoryPage() {
             if (err.status === 401) {
                 await logout();
                 window.location.reload();
+                return;
             }
+            setError("Unable to load the selected history entry.");
         } finally {
             setDetailLoading(false);
         }
@@ -84,6 +102,12 @@ export default function HistoryPage() {
                                 <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-600">{histories.length}</span>
                             </div>
 
+                            {error ? (
+                                <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                                    {error}
+                                </div>
+                            ) : null}
+
                             <div className="mt-5 space-y-3">
                                 {histories.map((history) => (
                                     <button
@@ -107,6 +131,26 @@ export default function HistoryPage() {
                                         </div>
                                     </button>
                                 ))}
+                            </div>
+
+                            <div className="mt-5 flex items-center justify-between gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                                    disabled={page === 1 || loading}
+                                    className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    Previous
+                                </button>
+                                <span className="text-sm font-semibold text-slate-600">Page {page}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setPage((current) => current + 1)}
+                                    disabled={!hasNextPage || loading}
+                                    className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    Next
+                                </button>
                             </div>
                         </section>
 

@@ -8,7 +8,7 @@ public static class DeckEndpoints
 {
     public static void MapDeckEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/decks");
+        var group = app.MapGroup("/api/decks").RequireAuthorization();
 
         group.MapGet("/", async (AppDbContext db, string? level) =>
         {

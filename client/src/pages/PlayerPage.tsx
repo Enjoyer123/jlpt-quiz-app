@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import {
     startConnection, joinRoom, submitAnswer,
     onPlayerJoined, onQuestionStarted,
-    onPlayerAnswered, onQuestionEnded, onGameEnded, onError
+    onPlayerAnswered, onQuestionEnded, onGameEnded, onError,
+    subscribeToConnectionStatus, type ConnectionStatus
 } from "../services/signalrService";
 
 interface Question {
@@ -29,6 +30,7 @@ export default function PlayerPage() {
     const [isConnected, setIsConnected] = useState<boolean>(false);
     const [phase, setPhase] = useState<GamePhase>("join");
     const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
+    const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("connecting");
     const [answeredCount, setAnsweredCount] = useState<number>(0);
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [correctIndex, setCorrectIndex] = useState<number>(-1);
@@ -39,6 +41,22 @@ export default function PlayerPage() {
     const roomCodeRef = useRef<string>("");
 
     useEffect(() => {
+        const unsubscribe = subscribeToConnectionStatus((status) => {
+            setConnectionStatus(status);
+            if (status === "connected") {
+                setIsConnected(true);
+                setError("");
+            } else if (status === "connectionLost") {
+                setIsConnected(false);
+                setError("Connection lost. Reconnecting...");
+            } else if (status === "failed") {
+                setIsConnected(false);
+                setError("Failed to connect to the game server.");
+            } else {
+                setIsConnected(false);
+            }
+        });
+
         startConnection().then(() => {
             setIsConnected(true);
 
@@ -84,15 +102,22 @@ export default function PlayerPage() {
             });
 
             onError((message) => setError(message));
+        }).catch(() => {
+            setIsConnected(false);
+            setError("Failed to connect to the game server.");
         });
 
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
+            unsubscribe();
         };
     }, []);
 
     const handleJoin = () => {
-        if (!roomCode || !nickname) return;
+        if (!roomCode || !nickname || !isConnected) {
+            setError("Waiting for the connection to be ready.");
+            return;
+        }
         setError("");
         roomCodeRef.current = roomCode;
         joinRoom(roomCode, nickname);
@@ -104,6 +129,14 @@ export default function PlayerPage() {
         setPhase("answered");
         submitAnswer(roomCodeRef.current, currentQuestion.questionId, index);
     };
+
+    const connectionLabel =
+        connectionStatus === "connected" ? "Connected" :
+        connectionStatus === "reconnecting" ? "Reconnecting..." :
+        connectionStatus === "connectionLost" ? "Connection Lost" :
+        connectionStatus === "failed" ? "Failed to connect" : "Connecting...";
+
+    const canJoinGame = isConnected && connectionStatus === "connected";
 
     const getChoiceClassName = (index: number) => {
         const base = "w-full rounded-[20px] border px-4 py-4 text-left text-sm font-semibold transition-all duration-200";
@@ -168,9 +201,12 @@ export default function PlayerPage() {
                                 />
                             </div>
                             {error && <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{error}</p>}
+                            <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm font-medium ${canJoinGame ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>
+                                {connectionLabel}
+                            </div>
                             <button
                                 onClick={handleJoin}
-                                disabled={!isConnected}
+                                disabled={!canJoinGame}
                                 className="mt-6 rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-400 px-5 py-3 font-semibold text-white shadow-md transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 Join room

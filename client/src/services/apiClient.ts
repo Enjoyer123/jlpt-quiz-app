@@ -10,7 +10,7 @@ export class ApiError extends Error {
     }
 }
 
-const baseUrl = "http://localhost:5296";
+const baseUrl = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
 const defaultHeaders: Record<string, string> = {
     "Content-Type": "application/json",

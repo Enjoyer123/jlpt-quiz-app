@@ -16,9 +16,9 @@ public static class QuestionEndpoints
             db.Questions.Add(question);
             await db.SaveChangesAsync();
             return Results.Created($"/api/questions/{question.Id}", question.ToDto());
-        });
+        }).RequireAuthorization();
 
-        var group = app.MapGroup("/api/questions");
+        var group = app.MapGroup("/api/questions").RequireAuthorization();
 
         group.MapPut("/{id:int}", async (int id, UpdateQuestionDto dto, AppDbContext db) =>
         {

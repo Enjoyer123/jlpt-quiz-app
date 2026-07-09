@@ -42,19 +42,17 @@ public static class AuthEndpoints
 
             var token = GenerateToken(user, config);
 
-            // Set HttpOnly cookie แทนส่ง token กลับมา
             http.Response.Cookies.Append("jwt", token, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = false, // true ตอน production
-                SameSite = SameSiteMode.Lax,
+                Secure = true,
+                SameSite = SameSiteMode.None,
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
             });
 
             return Results.Ok(new { email = user.Email });
         });
 
-        // เพิ่ม logout endpoint
         group.MapPost("/logout", (HttpContext http) =>
         {
             http.Response.Cookies.Delete("jwt");

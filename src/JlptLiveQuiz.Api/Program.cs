@@ -27,7 +27,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("ReactClient", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        var allowedOrigins = builder.Configuration["AllowedOrigins"] ?? "http://localhost:5173";
+        policy.WithOrigins(allowedOrigins.Split(","))
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -53,13 +54,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             OnMessageReceived = context =>
             {
-                // อ่าน JWT จาก cookie ก่อน
                 if (context.Request.Cookies.ContainsKey("jwt"))
                 {
                     context.Token = context.Request.Cookies["jwt"];
                 }
 
-                // SignalR ส่งผ่าน query string
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
                 if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/gameHub"))

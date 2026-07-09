@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import {
     startConnection, createRoom, startGame, nextQuestion,
     onRoomCreated, onPlayerJoined, onQuestionStarted,
-    onPlayerAnswered, onQuestionEnded, onGameEnded
+    onPlayerAnswered, onQuestionEnded, onGameEnded,
+    subscribeToConnectionStatus, type ConnectionStatus
 } from "../services/signalrService";
 import { getDeckSummaries, type DeckSummary } from "../services/deckService";
 
@@ -30,6 +31,8 @@ export default function HostPage() {
     const [roomCode, setRoomCode] = useState<string>("");
     const [players, setPlayers] = useState<string[]>([]);
     const [isConnected, setIsConnected] = useState<boolean>(false);
+    const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("connecting");
+    const [connectionError, setConnectionError] = useState<string>("");
     const [phase, setPhase] = useState<GamePhase>("lobby");
     const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
     const [answeredCount, setAnsweredCount] = useState<number>(0);
@@ -37,6 +40,22 @@ export default function HostPage() {
     const [correctIndex, setCorrectIndex] = useState<number>(-1);
 
     useEffect(() => {
+        const unsubscribe = subscribeToConnectionStatus((status) => {
+            setConnectionStatus(status);
+            if (status === "connected") {
+                setConnectionError("");
+                setIsConnected(true);
+            } else if (status === "connectionLost") {
+                setConnectionError("Connection lost. Reconnecting...");
+                setIsConnected(false);
+            } else if (status === "failed") {
+                setConnectionError("Failed to connect to the game server.");
+                setIsConnected(false);
+            } else if (status === "connecting") {
+                setIsConnected(false);
+            }
+        });
+
         const loadDecks = async () => {
             setIsLoadingDecks(true);
             try {
@@ -53,10 +72,14 @@ export default function HostPage() {
         };
 
         void loadDecks();
+
+        return () => {
+            unsubscribe();
+        };
     }, []);
 
     useEffect(() => {
-        startConnection().then(() => {
+        void startConnection().then(() => {
             setIsConnected(true);
 
             onRoomCreated((code) => setRoomCode(code));
@@ -87,6 +110,14 @@ export default function HostPage() {
         });
     }, []);
 
+    const connectionLabel =
+        connectionStatus === "connected" ? "Connected" :
+        connectionStatus === "reconnecting" ? "Reconnecting..." :
+        connectionStatus === "connectionLost" ? "Connection Lost" :
+        connectionStatus === "failed" ? "Failed to connect" : "Connecting...";
+
+    const canHostAct = isConnected && connectionStatus === "connected";
+
     return (
         <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.2),_transparent_25%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.18),_transparent_24%),linear-gradient(135deg,_#f8fcff_0%,_#f5fbf7_45%,_#faf6ff_100%)] px-4 py-6 text-slate-700 sm:px-6 lg:px-8">
             <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -115,10 +146,16 @@ export default function HostPage() {
                                     <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">Setup</p>
                                     <h2 className="text-2xl font-bold text-slate-900">Create a fresh room</h2>
                                 </div>
-                                <div className={`rounded-full px-3 py-1 text-sm font-semibold ${isConnected ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                                    {isConnected ? "Connected" : "Connecting..."}
+                                <div className={`rounded-full px-3 py-1 text-sm font-semibold ${canHostAct ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                                    {connectionLabel}
                                 </div>
                             </div>
+
+                            {connectionError ? (
+                                <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                                    {connectionError}
+                                </div>
+                            ) : null}
 
                             <label className="mt-6 block text-sm font-semibold text-slate-700" htmlFor="deck-select">
                                 Deck
@@ -143,7 +180,7 @@ export default function HostPage() {
                                 </select>
                                 <button
                                     onClick={() => selectedDeckId && createRoom(selectedDeckId)}
-                                    disabled={!isConnected || !!roomCode || !selectedDeckId || isLoadingDecks}
+                                    disabled={!canHostAct || !!roomCode || !selectedDeckId || isLoadingDecks}
                                     className="rounded-2xl bg-gradient-to-r from-emerald-500 to-lime-500 px-5 py-3 font-semibold text-white shadow-md transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     Create room
@@ -181,7 +218,7 @@ export default function HostPage() {
                                         </div>
                                         <button
                                             onClick={() => startGame(roomCode)}
-                                            disabled={players.length === 0}
+                                            disabled={players.length === 0 || !canHostAct}
                                             className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                                         >
                                             Start game
@@ -269,7 +306,7 @@ export default function HostPage() {
                                 <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">Reveal</p>
                                 <h2 className="text-2xl font-bold text-slate-900">Answer key</h2>
                             </div>
-                            <button onClick={() => nextQuestion(roomCode)} className="rounded-2xl bg-gradient-to-r from-orange-400 to-amber-400 px-5 py-3 font-semibold text-white shadow-md transition hover:brightness-105">
+                            <button onClick={() => nextQuestion(roomCode)} disabled={!canHostAct} className="rounded-2xl bg-gradient-to-r from-orange-400 to-amber-400 px-5 py-3 font-semibold text-white shadow-md transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60">
                                 Next question →
                             </button>
                         </div>

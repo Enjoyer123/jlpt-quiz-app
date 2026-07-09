@@ -24,8 +24,8 @@ export interface GameHistoryDetailDto {
     playerResults: PlayerResultDto[];
 }
 
-export async function getHistory(): Promise<GameHistoryDto[]> {
-    return fetchJson<GameHistoryDto[]>("/api/history", { method: "GET" });
+export async function getHistory(page = 1): Promise<GameHistoryDto[]> {
+    return fetchJson<GameHistoryDto[]>(`/api/history?page=${page}`, { method: "GET" });
 }
 
 export async function getHistoryDetail(roomCode: string): Promise<GameHistoryDetailDto> {
