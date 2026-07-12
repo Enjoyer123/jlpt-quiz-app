@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
     startConnection, createRoom, startGame, nextQuestion,
@@ -24,6 +24,87 @@ interface LeaderboardEntry {
 
 type GamePhase = "lobby" | "question" | "result" | "ended";
 
+// Reusable timer bar
+function TimerBar({ timeLeft, timeLimit }: { timeLeft: number; timeLimit: number }) {
+    const pct = timeLimit > 0 ? (timeLeft / timeLimit) * 100 : 0;
+    const color =
+        pct > 60 ? "#10b981"
+        : pct > 30 ? "#f59e0b"
+        : "#ef4444";
+
+    return (
+        <div className="flex items-center gap-3">
+            <span
+                className="min-w-[3.2rem] text-right text-sm font-black tabular-nums transition-colors duration-500"
+                style={{ color }}
+            >
+                {timeLeft}s
+            </span>
+            <div className="relative h-3 flex-1 overflow-hidden rounded-full bg-slate-200/70">
+                <div
+                    className="progress-bar-fill absolute left-0 top-0 h-full rounded-full"
+                    style={{
+                        width: `${pct}%`,
+                        backgroundColor: color,
+                        boxShadow: `0 0 8px 1px ${color}88`,
+                    }}
+                />
+            </div>
+        </div>
+    );
+}
+
+// Rank badge for top 3
+function RankBadge({ rank }: { rank: number }) {
+    if (rank === 1) {
+        return (
+            <span className="rank-gold inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-yellow-300 to-amber-400 text-xs font-black text-amber-900">
+                1
+            </span>
+        );
+    }
+    if (rank === 2) {
+        return (
+            <span className="rank-silver inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-300 text-xs font-black text-slate-700">
+                2
+            </span>
+        );
+    }
+    if (rank === 3) {
+        return (
+            <span className="rank-bronze inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-orange-300 to-amber-600 text-xs font-black text-amber-900">
+                3
+            </span>
+        );
+    }
+    return (
+        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">
+            {rank}
+        </span>
+    );
+}
+
+// Leaderboard list
+function LeaderboardList({ entries }: { entries: LeaderboardEntry[] }) {
+    return (
+        <div className="space-y-2">
+            {entries.map((entry, index) => (
+                <div
+                    key={`${entry.nickname}-${index}`}
+                    className="slide-in-up flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+                    style={{ animationDelay: `${index * 60}ms` }}
+                >
+                    <RankBadge rank={index + 1} />
+                    <span className="flex-1 font-semibold text-slate-900">{entry.nickname}</span>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black tabular-nums tracking-wide text-slate-600">
+                        {entry.score} pts
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 export default function HostPage() {
     const [selectedDeckId, setSelectedDeckId] = useState<number | null>(null);
     const [decks, setDecks] = useState<DeckSummary[]>([]);
@@ -38,6 +119,9 @@ export default function HostPage() {
     const [answeredCount, setAnsweredCount] = useState<number>(0);
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [correctIndex, setCorrectIndex] = useState<number>(-1);
+    const [copied, setCopied] = useState(false);
+    const [timeLeft, setTimeLeft] = useState<number>(0);
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     useEffect(() => {
         const unsubscribe = subscribeToConnectionStatus((status) => {
@@ -90,7 +174,19 @@ export default function HostPage() {
                 setCurrentQuestion(data);
                 setAnsweredCount(0);
                 setCorrectIndex(-1);
+                setTimeLeft(data.timeLimit);
                 setPhase("question");
+
+                if (timerRef.current) clearInterval(timerRef.current);
+                timerRef.current = setInterval(() => {
+                    setTimeLeft((prev) => {
+                        if (prev <= 1) {
+                            clearInterval(timerRef.current!);
+                            return 0;
+                        }
+                        return prev - 1;
+                    });
+                }, 1000);
             });
 
             onPlayerAnswered((data) => {
@@ -98,6 +194,7 @@ export default function HostPage() {
             });
 
             onQuestionEnded((data) => {
+                if (timerRef.current) clearInterval(timerRef.current);
                 setCorrectIndex(data.correctIndex);
                 setLeaderboard(data.leaderboard);
                 setPhase("result");
@@ -108,6 +205,10 @@ export default function HostPage() {
                 setPhase("ended");
             });
         });
+
+        return () => {
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
     }, []);
 
     const connectionLabel =
@@ -119,6 +220,15 @@ export default function HostPage() {
     const canHostAct = isConnected && connectionStatus === "connected";
     const hasDecks = decks.length > 0;
     const canCreateRoom = hasDecks && !!selectedDeckId && canHostAct && !roomCode && !isLoadingDecks;
+
+    const handleCopyCode = () => {
+        navigator.clipboard.writeText(roomCode).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
+    };
+
+    const answeredPct = players.length > 0 ? Math.round((answeredCount / players.length) * 100) : 0;
 
     return (
         <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.2),_transparent_25%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.18),_transparent_24%),linear-gradient(135deg,_#f8fcff_0%,_#f5fbf7_45%,_#faf6ff_100%)] px-4 py-6 text-slate-700 sm:px-6 lg:px-8">
@@ -140,6 +250,7 @@ export default function HostPage() {
                     </Link>
                 </header>
 
+                {/* ── LOBBY ── */}
                 {phase === "lobby" && (
                     <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
                         <section className="rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_70px_-25px_rgba(15,23,42,0.26)] backdrop-blur sm:p-8">
@@ -152,7 +263,8 @@ export default function HostPage() {
                                     <Link to="/decks" className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
                                         Manage decks
                                     </Link>
-                                    <div className={`rounded-full px-3 py-1 text-sm font-semibold ${canHostAct ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                                    <div className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ${canHostAct ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                                        <span className={`h-2 w-2 rounded-full animate-pulse ${canHostAct ? "bg-emerald-400" : "bg-amber-400"}`} />
                                         {connectionLabel}
                                     </div>
                                 </div>
@@ -205,9 +317,7 @@ export default function HostPage() {
                                 <div className="mt-3 rounded-[24px] border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
                                     {(() => {
                                         const selectedDeck = decks.find((deck) => deck.id === selectedDeckId);
-                                        if (!selectedDeck) {
-                                            return null;
-                                        }
+                                        if (!selectedDeck) return null;
                                         return (
                                             <div className="flex flex-wrap items-center justify-between gap-3">
                                                 <div>
@@ -220,6 +330,7 @@ export default function HostPage() {
                                 </div>
                             ) : null}
 
+                            {/* Room code + copy */}
                             {roomCode && (
                                 <div className="mt-8 rounded-[24px] border border-slate-200 bg-slate-50/80 p-5">
                                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -227,15 +338,24 @@ export default function HostPage() {
                                             <p className="text-sm font-semibold text-slate-500">Room code</p>
                                             <p className="text-3xl font-black tracking-[0.25em] text-slate-900">{roomCode}</p>
                                         </div>
-                                        <button
-                                            onClick={() => startGame(roomCode)}
-                                            disabled={players.length === 0 || !canHostAct}
-                                            className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                                        >
-                                            Start game
-                                        </button>
+                                        <div className="flex flex-wrap gap-2">
+                                            <button
+                                                onClick={handleCopyCode}
+                                                className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold transition ${copied ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"}`}
+                                            >
+                                                {copied ? "Copied!" : "Copy code"}
+                                            </button>
+                                            <button
+                                                onClick={() => startGame(roomCode)}
+                                                disabled={players.length === 0 || !canHostAct}
+                                                className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                            >
+                                                Start game
+                                            </button>
+                                        </div>
                                     </div>
 
+                                    {/* Players count bar */}
                                     <div className="mt-5 flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-sm text-slate-600">
                                         <span>Players in room</span>
                                         <span className="font-semibold text-slate-900">{players.length} joined</span>
@@ -243,7 +363,7 @@ export default function HostPage() {
 
                                     <div className="mt-4 grid gap-2">
                                         {players.map((name, index) => (
-                                            <div key={index} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                                            <div key={index} className="slide-in-up flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700" style={{ animationDelay: `${index * 50}ms` }}>
                                                 <span className="font-medium">{name}</span>
                                                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                                                     Player {index + 1}
@@ -264,7 +384,10 @@ export default function HostPage() {
                             <div className="mt-6 space-y-3 rounded-[24px] bg-white/10 p-4">
                                 <div className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3 text-sm">
                                     <span>Connection</span>
-                                    <span className="font-semibold">{isConnected ? "Live" : "Standby"}</span>
+                                    <span className="flex items-center gap-1.5 font-semibold">
+                                        <span className={`h-2 w-2 rounded-full animate-pulse ${isConnected ? "bg-emerald-400" : "bg-amber-400"}`} />
+                                        {isConnected ? "Live" : "Standby"}
+                                    </span>
                                 </div>
                                 <div className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3 text-sm">
                                     <span>Current phase</span>
@@ -279,6 +402,7 @@ export default function HostPage() {
                     </div>
                 )}
 
+                {/* ── QUESTION ── */}
                 {phase === "question" && currentQuestion && (
                     <section className="rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_70px_-25px_rgba(15,23,42,0.26)] backdrop-blur sm:p-8">
                         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -288,9 +412,22 @@ export default function HostPage() {
                                     {currentQuestion.questionIndex + 1}/{currentQuestion.totalQuestions}
                                 </h2>
                             </div>
-                            <div className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-700">
+                            <div className="rounded-full border border-sky-200 bg-sky-50 px-4 py-1.5 text-sm font-semibold text-sky-700">
                                 {answeredCount}/{players.length} answered
                             </div>
+                        </div>
+
+                        {/* Timer bar */}
+                        <div className="mt-4">
+                            <TimerBar timeLeft={timeLeft} timeLimit={currentQuestion.timeLimit} />
+                        </div>
+
+                        {/* Answered progress */}
+                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+                            <div
+                                className="h-full rounded-full bg-gradient-to-r from-sky-400 to-cyan-400 transition-all duration-700 ease-out"
+                                style={{ width: `${answeredPct}%` }}
+                            />
                         </div>
 
                         <div className="mt-6 rounded-[24px] border border-slate-200 bg-slate-50/80 p-6">
@@ -310,6 +447,7 @@ export default function HostPage() {
                     </section>
                 )}
 
+                {/* ── RESULT ── */}
                 {phase === "result" && currentQuestion && (
                     <section className="rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_70px_-25px_rgba(15,23,42,0.26)] backdrop-blur sm:p-8">
                         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -317,7 +455,11 @@ export default function HostPage() {
                                 <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">Reveal</p>
                                 <h2 className="text-2xl font-bold text-slate-900">Answer key</h2>
                             </div>
-                            <button onClick={() => nextQuestion(roomCode)} disabled={!canHostAct} className="rounded-2xl bg-gradient-to-r from-orange-400 to-amber-400 px-5 py-3 font-semibold text-white shadow-md transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60">
+                            <button
+                                onClick={() => nextQuestion(roomCode)}
+                                disabled={!canHostAct}
+                                className="rounded-2xl bg-gradient-to-r from-orange-400 to-amber-400 px-5 py-3 font-semibold text-white shadow-md transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
                                 Next question →
                             </button>
                         </div>
@@ -331,35 +473,22 @@ export default function HostPage() {
 
                         <div className="mt-6 rounded-[24px] border border-slate-200 bg-slate-50/80 p-6">
                             <h3 className="text-lg font-bold text-slate-900">Leaderboard</h3>
-                            <div className="mt-4 space-y-2">
-                                {leaderboard.map((entry, index) => (
-                                    <div key={`${entry.nickname}-${index}`} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
-                                        <span className="font-semibold text-slate-900">{index + 1}. {entry.nickname}</span>
-                                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                                            {entry.score} pts
-                                        </span>
-                                    </div>
-                                ))}
+                            <div className="mt-4">
+                                <LeaderboardList entries={leaderboard} />
                             </div>
                         </div>
                     </section>
                 )}
 
+                {/* ── ENDED ── */}
                 {phase === "ended" && (
                     <section className="rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_70px_-25px_rgba(15,23,42,0.26)] backdrop-blur sm:p-8">
                         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">Session complete</p>
                         <h2 className="mt-2 text-3xl font-black text-slate-900">The game has finished</h2>
                         <div className="mt-6 rounded-[24px] border border-slate-200 bg-slate-50/80 p-6">
                             <h3 className="text-lg font-bold text-slate-900">Final leaderboard</h3>
-                            <div className="mt-4 space-y-2">
-                                {leaderboard.map((entry, index) => (
-                                    <div key={`${entry.nickname}-${index}`} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
-                                        <span className="font-semibold text-slate-900">{index + 1}. {entry.nickname}</span>
-                                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                                            {entry.score} pts
-                                        </span>
-                                    </div>
-                                ))}
+                            <div className="mt-4">
+                                <LeaderboardList entries={leaderboard} />
                             </div>
                         </div>
                     </section>

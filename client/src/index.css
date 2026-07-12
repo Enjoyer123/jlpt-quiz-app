@@ -26,3 +26,65 @@ body {
 #root {
   min-height: 100vh;
 }
+
+/* Timer bar animation */
+@keyframes timer-shrink {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+.timer-bar {
+  transition: background-color 0.5s ease;
+}
+
+/* Lobby waiting pulse */
+@keyframes lobby-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+.lobby-dot:nth-child(1) { animation: lobby-pulse 1.4s ease-in-out infinite; }
+.lobby-dot:nth-child(2) { animation: lobby-pulse 1.4s ease-in-out 0.2s infinite; }
+.lobby-dot:nth-child(3) { animation: lobby-pulse 1.4s ease-in-out 0.4s infinite; }
+
+/* Answer reveal slide-in */
+@keyframes slide-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-in-up {
+  animation: slide-in-up 0.35s ease-out both;
+}
+
+/* Rank badge shimmer for top 3 */
+@keyframes gold-shimmer {
+  0%, 100% { box-shadow: 0 0 8px 2px rgba(234,179,8,0.35); }
+  50% { box-shadow: 0 0 18px 5px rgba(234,179,8,0.6); }
+}
+
+@keyframes silver-shimmer {
+  0%, 100% { box-shadow: 0 0 8px 2px rgba(148,163,184,0.35); }
+  50% { box-shadow: 0 0 18px 5px rgba(148,163,184,0.6); }
+}
+
+@keyframes bronze-shimmer {
+  0%, 100% { box-shadow: 0 0 8px 2px rgba(180,120,60,0.35); }
+  50% { box-shadow: 0 0 18px 5px rgba(180,120,60,0.6); }
+}
+
+.rank-gold { animation: gold-shimmer 2s ease-in-out infinite; }
+.rank-silver { animation: silver-shimmer 2s ease-in-out infinite; }
+.rank-bronze { animation: bronze-shimmer 2s ease-in-out infinite; }
+
+/* Progress bar smooth transition */
+.progress-bar-fill {
+  transition: width 1s linear, background-color 0.5s ease;
+}
+
+/* Answered count fill */
+@keyframes fill-in {
+  from { width: 0%; }
+  to { width: var(--fill-pct); }
+}
+

@@ -15,21 +15,21 @@ const roles = [
         description: "Create a room, guide the quiz flow, and reveal each answer with a warm, playful touch.",
         href: "/host",
         accent: "from-emerald-400 to-lime-400",
-        icon: "🎮",
+        iconLabel: "H",
     },
     {
         title: "Player",
         description: "Join a live room, answer quick questions, and watch the leaderboard bloom in real time.",
         href: "/player",
         accent: "from-sky-400 to-cyan-400",
-        icon: "✨",
+        iconLabel: "P",
     },
     {
         title: "History",
         description: "Review completed rooms, scores, and the stories behind past sessions.",
         href: "/history",
         accent: "from-fuchsia-400 to-violet-400",
-        icon: "📚",
+        iconLabel: "R",
     },
 ];
 
@@ -64,8 +64,8 @@ function LandingPage() {
                             to={role.href}
                             className="group rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-[0_14px_40px_-25px_rgba(15,23,42,0.35)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_18px_55px_-20px_rgba(15,23,42,0.35)]"
                         >
-                            <div className={`inline-flex rounded-2xl bg-gradient-to-br ${role.accent} p-3 text-2xl shadow-sm`}>
-                                {role.icon}
+                            <div className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${role.accent} text-lg font-black text-white shadow-sm`}>
+                                {role.iconLabel}
                             </div>
                             <h2 className="mt-4 text-xl font-bold text-slate-900">{role.title}</h2>
                             <p className="mt-2 text-sm leading-6 text-slate-600">{role.description}</p>

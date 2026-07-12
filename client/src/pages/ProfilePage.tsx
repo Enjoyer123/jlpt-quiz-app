@@ -67,8 +67,6 @@ export default function ProfilePage() {
                                 <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">Account</p>
                                 <p className="mt-3 text-sm text-slate-600">Email</p>
                                 <p className="text-lg font-semibold text-slate-900">{profile.email}</p>
-                                <p className="mt-4 text-sm text-slate-600">User ID</p>
-                                <p className="text-lg font-semibold text-slate-900">{profile.id}</p>
                             </div>
                             <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-5">
                                 <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">Overview</p>
