@@ -98,31 +98,35 @@ React (Vite + TypeScript)
 
 ## Screenshots
 
-> _Screenshots not yet available. Placeholder sections are provided below._
-
 ### Landing Page
-_Coming soon_
+![Landing Page](imgJlptQuiz/landing.png)
 
 ### Login
-_Coming soon_
+![Login](imgJlptQuiz/login.png)
 
 ### Host
-_Coming soon_
+![Host Studio](imgJlptQuiz/host.png)
 
 ### Player
-_Coming soon_
+![Player — Join Room](imgJlptQuiz/player.png)
+
+![Player — Question](imgJlptQuiz/player1.png)
+
+![Player — Result](imgJlptQuiz/player2.png)
+
+![Player — Ended](imgJlptQuiz/player3.png)
 
 ### Deck Management
-_Coming soon_
+![Deck Management](imgJlptQuiz/deckm.png)
 
 ### Question Management
-_Coming soon_
+![Question Management](imgJlptQuiz/questionm.png)
 
 ### History
-_Coming soon_
+![History](imgJlptQuiz/history.png)
 
 ### Profile
-_Coming soon_
+![Profile](imgJlptQuiz/profile.png)
 
 ---
 
